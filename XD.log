@@ -1,0 +1,52 @@
+
+  Processing 134687950
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'S-VA127PR NANSEMOND ST': 2, 'S-VA127PR PARKWOOD AVE': 1, 'S-VA127PR FREEMAN RD': 1, 'R-VA   SR00147PA001': 1})
+
+      Most Common: [('S-VA127PR NANSEMOND ST', 2)]
+      Most Common Count: 1
+      -- Failed to find matching route --
+
+    Second Iteration...
+      Nearby routes found:
+
+      Counter({'S-VA127PR NANSEMOND ST': 5, 'S-VA127PR PARKWOOD AVE': 4, 'S-VA127PR FREEMAN RD': 1})
+
+      Most Common: [('S-VA127PR NANSEMOND ST', 5)]
+      Most Common Count: 1
+      -- Matching route found --
+
+  Processing 1310240068
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'S-VA127PR THOMPSON ST N': 3, 'S-VA127PR FRANKLIN ST W': 1, 'S-VA127PR WYTHE AVE': 1})
+
+      Most Common: [('S-VA127PR THOMPSON ST N', 3)]
+      Most Common Count: 1
+      -- Matching route found --
+
+  Processing 1310292016
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'R-VA127UR07629NB      RMP000.00A': 2, 'S-VA127PR PARK AVE': 1, 'S-VA127PR THOMPSON ST N': 1, 'R-VA   IS00195NB': 1})
+
+      Most Common: [('R-VA127UR07629NB      RMP000.00A', 2)]
+      Most Common Count: 1
+      -- Failed to find matching route --
+
+    Second Iteration...
+      Nearby routes found:
+
+      Counter({'R-VA127UR07629NB      RMP000.00A': 4, 'S-VA127PR PARK AVE': 1, 'S-VA127PR THOMPSON ST N': 1, 'R-VA   IS00195NB': 1})
+
+      Most Common: [('R-VA127UR07629NB      RMP000.00A', 4)]
+      Most Common Count: 1
+      -- Matching route found --
+[['134687950', 'S-VA127PR NANSEMOND ST', 0.399, 0.518], ['1310240068', 'S-VA127PR THOMPSON ST N', 0.678, 0.738], ['1310292016', 'R-VA127UR07629NB      RMP000.00A', -0.0, 0.09]]
+
+
+Run Time: 0:00:10.843438
