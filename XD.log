@@ -1,52 +1,185 @@
 
-  Processing 134687950
+
+  Processing 134703088
     First Iteration...
       Nearby routes found:
 
-      Counter({'S-VA127PR NANSEMOND ST': 2, 'S-VA127PR PARKWOOD AVE': 1, 'S-VA127PR FREEMAN RD': 1, 'R-VA   SR00147PA001': 1})
+      Counter({'S-VA127PR THOMPSON ST N': 1, 'R-VA   SR00006EB': 1})
 
-      Most Common: [('S-VA127PR NANSEMOND ST', 2)]
+      Most Common: [('S-VA127PR THOMPSON ST N', 1), ('R-VA   SR00006EB', 1)]
+      Most Common Count: 2
+      -- Failed to find matching route --
+
+    Second Iteration...
+      segLen: 65.58370743412621
+      Reduced d to 16.395926858531553
+        178045.3324000016, 175355.07889999822
+        178060.55450369313, 175348.98677584043
+        178075.7766073847, 175342.89465168264
+        178091.43067030646, 175338.0398919385
+      Nearby routes found:
+
+      Counter({'S-VA127PR THOMPSON ST N': 1, 'R-VA   SR00006EB': 1})
+
+      Most Common: [('S-VA127PR THOMPSON ST N', 1), ('R-VA   SR00006EB', 1)]
+      Most Common Count (>= 3): 0
+      -- Failed to find matching route(s) --
+
+
+  Processing 429100710
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'R-VA   IS00195NB      RMP014.00A': 2, 'S-VA127PR THOMPSON ST N': 1})
+
+      Most Common: [('R-VA   IS00195NB      RMP014.00A', 2)]
       Most Common Count: 1
       -- Failed to find matching route --
 
     Second Iteration...
+      segLen: 53.33016039117918
+      Reduced d to 13.332540097794794
+        177837.4509000033, 175156.03990000114
+        177849.1408449929, 175149.63059369015
+        177862.1206226958, 175150.51582001807
+        177874.63066001478, 175155.0963362315
       Nearby routes found:
 
-      Counter({'S-VA127PR NANSEMOND ST': 5, 'S-VA127PR PARKWOOD AVE': 4, 'S-VA127PR FREEMAN RD': 1})
+      Counter({'R-VA   IS00195NB      RMP014.00A': 3, 'S-VA127PR THOMPSON ST N': 1})
 
-      Most Common: [('S-VA127PR NANSEMOND ST', 5)]
-      Most Common Count: 1
-      -- Matching route found --
+      Most Common: [('R-VA   IS00195NB      RMP014.00A', 3), ('S-VA127PR THOMPSON ST N', 1)]
+      Most Common Count (>= 3): 1
+      -- Matching route(s) found --
+        No intersections within 30m distance.  Returning testGeom.
+        One intersection within 30m distance.  Returning intersection at 177865.70849999785, 175134.5155000016.
 
-  Processing 1310240068
+
+  Processing 441066134
     First Iteration...
       Nearby routes found:
 
-      Counter({'S-VA127PR THOMPSON ST N': 3, 'S-VA127PR FRANKLIN ST W': 1, 'S-VA127PR WYTHE AVE': 1})
+      Counter({'S-VA127NP GROVE AVE': 3, 'S-VA127PR GROVE AVE': 3, 'S-VA127PR BERRINGTON CT': 1, 'S-VA127PR THOMPSON ST N': 1})
 
-      Most Common: [('S-VA127PR THOMPSON ST N', 3)]
-      Most Common Count: 1
-      -- Matching route found --
-
-  Processing 1310292016
-    First Iteration...
-      Nearby routes found:
-
-      Counter({'R-VA127UR07629NB      RMP000.00A': 2, 'S-VA127PR PARK AVE': 1, 'S-VA127PR THOMPSON ST N': 1, 'R-VA   IS00195NB': 1})
-
-      Most Common: [('R-VA127UR07629NB      RMP000.00A', 2)]
-      Most Common Count: 1
+      Most Common: [('S-VA127NP GROVE AVE', 3), ('S-VA127PR GROVE AVE', 3)]
+      Most Common Count: 2
       -- Failed to find matching route --
 
     Second Iteration...
+      segLen: 73.98022989401926
+      Reduced d to 18.495057473504815
+        177752.36360000074, 175044.69900000095
+        177768.31452179563, 175035.33763018443
+        177784.2654435905, 175025.9762603679
+        177800.2163653854, 175016.61489055137
       Nearby routes found:
 
-      Counter({'R-VA127UR07629NB      RMP000.00A': 4, 'S-VA127PR PARK AVE': 1, 'S-VA127PR THOMPSON ST N': 1, 'R-VA   IS00195NB': 1})
+      Counter({'S-VA127NP GROVE AVE': 4, 'S-VA127PR GROVE AVE': 4, 'S-VA127PR BERRINGTON CT': 1})
 
-      Most Common: [('R-VA127UR07629NB      RMP000.00A', 4)]
-      Most Common Count: 1
-      -- Matching route found --
-[['134687950', 'S-VA127PR NANSEMOND ST', 0.399, 0.518], ['1310240068', 'S-VA127PR THOMPSON ST N', 0.678, 0.738], ['1310292016', 'R-VA127UR07629NB      RMP000.00A', -0.0, 0.09]]
+      Most Common: [('S-VA127NP GROVE AVE', 4), ('S-VA127PR GROVE AVE', 4), ('S-VA127PR BERRINGTON CT', 1)]
+      Most Common Count (>= 3): 2
+      -- Matching route(s) found --
+        Two routes found.  Comparing RTE_NN values for duplicated route...
+Comparing similarity between 'S-VA127NP GROVE AVE' and 'S-VA127PR GROVE AVE'
+Similarity Ratio: 0.9473684210526315
+Returning ['S-VA127PR GROVE AVE']
+        2 intersections found.  Returning closest intersection.
+        Returning intersection at 177754.57140000165, 175052.63100000098
+        One intersection within 30m distance.  Returning intersection at 177815.2330000028, 175013.11169999838.
 
 
-Run Time: 0:00:10.843438
+  Processing 441066135
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'S-VA127NP GROVE AVE': 3, 'S-VA127PR GROVE AVE': 3, 'S-VA127PR THOMPSON ST N': 1, 'S-VA127PR BERRINGTON CT': 1})
+
+      Most Common: [('S-VA127NP GROVE AVE', 3), ('S-VA127PR GROVE AVE', 3)]
+      Most Common Count: 2
+      -- Failed to find matching route --
+
+    Second Iteration...
+      segLen: 72.37138123933352
+      Reduced d to 18.09284530983338
+        177818.879900001, 175015.21829999983
+        177803.19931768478, 175024.23166811088
+        177787.40845487654, 175033.06341217292
+        177771.61759206833, 175041.89515623497
+      Nearby routes found:
+
+      Counter({'S-VA127NP GROVE AVE': 4, 'S-VA127PR GROVE AVE': 4, 'S-VA127PR THOMPSON ST N': 1})
+
+      Most Common: [('S-VA127NP GROVE AVE', 4), ('S-VA127PR GROVE AVE', 4), ('S-VA127PR THOMPSON ST N', 1)]
+      Most Common Count (>= 3): 2
+      -- Matching route(s) found --
+        Two routes found.  Comparing RTE_NN values for duplicated route...
+Comparing similarity between 'S-VA127NP GROVE AVE' and 'S-VA127PR GROVE AVE'
+Similarity Ratio: 0.9473684210526315
+Returning ['S-VA127PR GROVE AVE']
+        One intersection within 30m distance.  Returning intersection at 177815.2330000028, 175013.11169999838.
+        2 intersections found.  Returning closest intersection.
+        Returning intersection at 177754.57140000165, 175052.63100000098
+
+
+  Processing 1310507812
+    First Iteration...
+      Nearby routes found:
+
+      Counter({'R-VA   IS00195NB': 1, 'R-VA   IS00195NB      RMP014.00A': 1})
+
+      Most Common: [('R-VA   IS00195NB', 1), ('R-VA   IS00195NB      RMP014.00A', 1)]
+      Most Common Count: 2
+      -- Failed to find matching route --
+
+    Second Iteration...
+      segLen: 289.500704040517
+        177646.83829999715, 174964.8027999997
+        177662.17570018946, 174984.54524552554
+        177675.79914142136, 175005.43894773282
+        177688.27470641528, 175027.10367201178
+        177701.5267896071, 175048.25588072866
+        177716.5427584067, 175068.24389416198
+        177731.55872720628, 175088.23190759527
+        177746.647030815, 175108.16469648242
+        177761.9713365347, 175127.91730780873
+        177777.76599369632, 175147.2280051598
+        177798.97091290072, 175159.96048549097
+        177823.80914625493, 175160.55147483438
+      Nearby routes found:
+
+      Counter({'R-VA   IS00195NB      RMP014.00A': 5, 'R-VA   IS00195NB': 3, 'S-VA127NP GROVE AVE': 1, 'S-VA127PR GROVE AVE': 1})
+
+      Most Common: [('R-VA   IS00195NB      RMP014.00A', 5), ('R-VA   IS00195NB', 3), ('S-VA127NP GROVE AVE', 1), ('S-VA127PR GROVE AVE', 1)]
+      Most Common Count (>= 3): 2
+      -- Matching route(s) found --
+        Two routes found.  Comparing RTE_NN values for duplicated route...
+Comparing similarity between 'R-VA   IS00195NB      RMP014.00A' and 'R-VA   IS00195NB'
+Similarity Ratio: 0.6666666666666666
+Returning ['R-VA   IS00195NB      RMP014.00A', 'R-VA   IS00195NB']
+        Two routes found.  Attempting to find common intersection...
+        commonInt: 220986
+        commonIntGeom: (177723.61039999872, 175106.31899999827)
+              XDSeg.BeginPoint: (177646.83829999715,174964.8027999997)
+              (['R-VA   IS00195NB', <Polyline object at 0x1d53ac58d88[0x1d53a1f1a20]>], ['R-VA   IS00195NB      RMP014.00A', <Polyline object at 0x1d53ac58288[0x1d53a1f1c60]>])
+              0.1751594489604486
+              161.61977322949477
+        No intersections within 30m distance.  Returning testGeom.
+        One intersection within 30m distance.  Returning intersection at 177723.61039999872, 175106.31899999827.
+        One intersection within 30m distance.  Returning intersection at 177723.61039999872, 175106.31899999827.
+        No intersections within 30m distance.  Returning testGeom.
+        firstSegment: R-VA   IS00195NB
+          XDSeg.BeginPoint: (177646.83829999715,174964.8027999997)
+          commonIntGeom: (177723.61039999872,175106.31899999827)
+        secondSegment: R-VA   IS00195NB      RMP014.00A
+          commonIntGeom: (177723.61039999872,175106.31899999827)
+          XDSeg.EndPoint: (177837.4509000033,175156.03990000114)
+[['134703088', None, None, None], ['429100710', 'R-VA   IS00195NB      RMP014.00A', 0.092, 0.11], ['441066134', 'S-VA127PR GROVE AVE', 2.029, 1.979], ['441066135', 'S-VA127PR GROVE AVE', 1.979, 2.029], ['1310507812', 'R-VA   IS00195NB', 0.718, 0.829], ['1310507812', 'R-VA   IS00195NB      RMP014.00A', -0.0, 0.092]]
+
+
+Run Time: 0:00:12.078054
+  Processed 5 XD Segments
+    First Iteration: 0, 0%
+    Second Iteration: 4, 80%
+    Third Iteration: N/A, 0%
+    Error: 1, 20%
+      Error list:
+        134703088
