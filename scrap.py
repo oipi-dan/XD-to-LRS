@@ -1,8 +1,21 @@
-testlist = [1,2,3]
+import arcpy
+from xd_to_rns import compare_route_name_similarity
 
-testlist2 = [1]
+lrs = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\LRS'
 
-print(testlist)
-testlist = testlist2
 
-print(testlist)
+rteA = 'R-VA   SR00195SB'
+rteB = 'R-VA   IS00195SB'
+
+print(rteA, rteB)
+print(compare_route_name_similarity(rteA, rteB, lrs))
+
+rteA = 'R-VA   IS00195NB'
+rteB = 'R-VA   IS00195SB'
+print(rteA, rteB)
+print(compare_route_name_similarity(rteA, rteB, lrs))
+
+rteA = 'R-VA   IS00192NB'
+rteB = 'R-VA   IS00195SB'
+print(rteA, rteB)
+print(compare_route_name_similarity(rteA, rteB, lrs))

@@ -95,7 +95,7 @@ def get_point_mp(inputPointGeometry, lrs, rte_nm, lyrIntersections):
 
 
 def get_points_along_line(geom, d=50):
-    """ Find points every m distance along the input polyline geometry and
+    """ Find points every d distance along the input polyline geometry and
         return them as a list """
     
     segLen = geom.getLength('GEODESIC','METERS')
@@ -152,19 +152,27 @@ def compare_route_name_similarity(rteA, rteB, lrs):
         identify these cases and only return one route if they are very similar.  In these
         cases, the prime direction will take priority.  If the XD segment belongs to the
         non-prime side, this will be fixed in the route flipping step. """
-    log.debug(f"Comparing similarity between '{rteA}' and '{rteB}'")
+    log.debug(f"\n        Comparing similarity between '{rteA}' and '{rteB}'")
+
+    # First check route type (eg, IS, US, etc).  If they do not match, then the routes are different
+    rteA_type = rteA[7:9]
+    rteB_type = rteB[7:9]
+    
+    if rteA_type != rteB_type:
+        return [rteA, rteB]
+
     sm = SequenceMatcher(None, rteA, rteB)
     similarity = sm.ratio()
-    log.debug(f'Similarity Ratio: {similarity}')
+    log.debug(f'        Similarity Ratio: {similarity}')
     if similarity >= 0.9: # Likely the same route
         # Identify the prime direction
         rte_parent_rte_nm = [row[0] for row in arcpy.da.SearchCursor(lrs, 'RTE_PARENT_RTE_NM', f"RTE_NM IN ('{rteA}','{rteB}')") if row[0] is not None]
-        print(rte_parent_rte_nm)
+
         if len(rte_parent_rte_nm) == 1:
-            log.debug(f'Returning {rte_parent_rte_nm}')
+            log.debug(f'        Returning {rte_parent_rte_nm}\n')
             return rte_parent_rte_nm
     
-    log.debug(f'Returning {[rteA, rteB]}')
+    log.debug(f'        Returning {[rteA, rteB]}\n')
     return [rteA, rteB]
 
 
@@ -173,7 +181,6 @@ def find_common_intersection(rteA, rteB, lrs, intersections):
         routes share a single intersection """
 
     def get_ints(rte_nm, lrs, intersections):
-        print(f'get_ints({rte_nm})')
         arcpy.management.SelectLayerByAttribute(lrs,'CLEAR_SELECTION')
         arcpy.management.SelectLayerByAttribute(intersections,'CLEAR_SELECTION')
 
@@ -189,7 +196,6 @@ def find_common_intersection(rteA, rteB, lrs, intersections):
 
 
     commonInts = [rte for rte in rteAInts if rte in rteBInts]
-    print('commonInts: ', commonInts)
 
     if len(commonInts) == 1:
         return commonInts[0]
@@ -341,10 +347,7 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                     compareResult = compare_route_name_similarity(segResults[0], segResults[1], lrs)
 
                     if len(compareResult) == 1: # Both directions of the same route found.  We will only use the prime direction
-                        print('\nHA HA HA')
-                        print('segResults:',segResults,'compareResult:',compareResult)
                         segResults = compareResult
-                        print(segResults)
 
                     if len(compareResult) != 1: # Two individual routes found.  Continue mapping on two routes
                         log.debug('        Two routes found.  Attempting to find common intersection...')
@@ -427,11 +430,8 @@ if __name__ == '__main__':
 
     # Test set of XD Segments
     testList = [132436349, 441050854, 132464894]
-    testList = [134703088,
-        429100710,
-        441066134,
-        441066135,
-        1310507812]
+    # Test these on 1/20/2023:
+    testList = [132155935, 1310472129, 449114595, 1310233908, 1310536486]
     testListStr = ''
     testSQL = ''
     if len(testList) > 0:
