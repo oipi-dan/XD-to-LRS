@@ -1,7 +1,17 @@
 """ These are functions to paste into Pro's python window to aid in QC """
 
-XDLayer = ''
-OutputLayer = ''
+XDLayer = 'USA_Virginia'
+OutputLayer = 'output'
+
+testlist = [row[0] for row in arcpy.da.SearchCursor(XDLayer, 'XDSegID')]
+current = None
+
+def next():
+    global current
+    if current:
+        testlist.pop(0)
+    current = testlist[0]
+    sd(current)
 
 def set_df(layerName, sql):
     prj = arcpy.mp.ArcGISProject('CURRENT')

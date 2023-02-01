@@ -16,6 +16,13 @@ count_secondIteration = 0
 count_error = 0
 error_list = []
 
+# This is a list of routes where the MP is backwards than expected
+# It should be used to correct invalid results and updated with
+# new versions LRS if they are corrected
+LRS_RTE_ERRORS__REVERSED_MP = [
+    'R-VA000SC06624NB'
+]
+
 class XDSegment:
     def __init__(self, record):
         self.XDSegID = record[0]
@@ -36,6 +43,8 @@ class MatchedRoute:
         self.distanceFromXDSeg = self.get_distance_from_XD_Seg(XDSeg.BeginPoint)
         self.beginPoint = arcpy.PointGeometry(arcpy.Point(0,0))
         self.endPoint = arcpy.PointGeometry(arcpy.Point(0,0))
+        self.intersections = None
+        self.distanceToClosestIntersection = None
 
 
     def get_geom(self, lrs):
@@ -54,8 +63,23 @@ class MatchedRoute:
             return None
 
     
+    def get_distance_to_closest_intersection(self, lyrIntersections, XDSeg):
+        BeginPoint = XDSeg.BeginPoint
+        arcpy.management.SelectLayerByAttribute(lyrIntersections,'CLEAR_SELECTION')
+        arcpy.SelectLayerByLocation_management(lyrIntersections, 'WITHIN_A_DISTANCE', self.geom, '5 METERS', 'NEW_SELECTION')
+        intersections = [row[0] for row in arcpy.da.SearchCursor(lyrIntersections, 'SHAPE@')]
+        for intersection in intersections:
+            dist = BeginPoint.distanceTo(intersection)
+            if self.distanceToClosestIntersection is None:
+                self.distanceToClosestIntersection = dist
+
+            if dist < self.distanceToClosestIntersection:
+                self.distanceToClosestIntersection = dist
+
+
+    
     def __repr__(self):
-        return f"'<MatchedRoute {self.rte_nm}': {round(self.distanceFromXDSeg, 3)}m, BeginPoint: {self.beginPoint.firstPoint.X},{self.beginPoint.firstPoint.Y}   EndPoint: {self.endPoint.firstPoint.X},{self.beginPoint.firstPoint.Y}>"
+        return f"'<MatchedRoute {self.rte_nm}': {round(self.distanceFromXDSeg, 3)}m, BeginPoint: {self.beginPoint.firstPoint.X},{self.beginPoint.firstPoint.Y}   EndPoint: {self.endPoint.firstPoint.X},{self.beginPoint.firstPoint.Y}    dist: {self.distanceToClosestIntersection}>"
 
 
 def get_begin_middle_end(geom):
@@ -64,8 +88,10 @@ def get_begin_middle_end(geom):
     return
 
 
-def find_nearby_routes(point, lrs, searchDistance="10 METERS"):
+def find_nearby_routes(point, lrs, searchDistance="9 METERS", rerun=False):
     """ Given an input point, will return a list of all routes within the searchDistance """
+    if rerun == True:
+        searchDistance = "20 METERS"
 
     routes = []
     arcpy.management.SelectLayerByLocation(lrs, 'WITHIN_A_DISTANCE', point, searchDistance)
@@ -136,7 +162,7 @@ def get_point_mp(inputPointGeometry, lrs, rte_nm, lyrIntersections):
         return None
 
 
-def get_points_along_line(geom, d=50):
+def get_points_along_line(geom, d=50, rerun=False):
     """ Find points every d distance along the input polyline geometry and
         return them as a list """
     
@@ -145,8 +171,12 @@ def get_points_along_line(geom, d=50):
 
     # For short segments, reduce m to increase the number of test points
     if segLen <= 150:
-        d = segLen / 4
-        log.debug(f'      Reduced d to {d}')
+        if rerun == False:
+            d = segLen / 4
+            log.debug(f'      Reduced d to {d}')
+        else:            
+            d = segLen / 5
+            log.debug(f'      Reduced d to {d}')
     points = []
 
     m = 0
@@ -221,7 +251,7 @@ def compare_route_name_similarity(rteA, rteB, lrs):
     return [rteA, rteB]
 
 
-def find_common_intersection(rteA, rteB, lrs, intersections):
+def find_common_intersection(rteA, rteB, lrs, intersections, XDSeg, commonIntsUsed=[]):
     """ Given two rte_nms, this will return the intersection objectID if the two
         routes share a single intersection """
 
@@ -239,31 +269,115 @@ def find_common_intersection(rteA, rteB, lrs, intersections):
     rteAInts = get_ints(rteA, lrs, intersections)
     rteBInts = get_ints(rteB, lrs, intersections)
 
-
     commonInts = [rte for rte in rteAInts if rte in rteBInts]
 
+     # Remove int as an option if it's already been used
+    if len(commonIntsUsed) != 0:
+        commonInts = [int for int in commonInts if int not in commonIntsUsed]
+
     if len(commonInts) == 1:
+        log.debug(f'        One common intersection found: {commonInts}\n')
         return commonInts[0]
-    
+
+    if len(commonInts) > 1:
+        log.debug(f'        {len(commonInts)} common intersections found: {commonInts}\n')
+        # Attempt to narrow down intersections to one
+        log.debug(f'        Selecting only nearby common intersections')
+        arcpy.management.SelectLayerByAttribute(intersections,'CLEAR_SELECTION')
+        arcpy.SelectLayerByLocation_management(intersections, "INTERSECT", XDSeg.Geom, "10 METERS")
+        nearbyInts = intersections.getSelectionSet()
+        commonInts2 = [int for int in nearbyInts if int in commonInts]
+        if len(commonInts2) == 1:
+            log.debug(f'        {len(commonInts2)} nearby common intersection found.  Returning {commonInts2[0]}')
+            return commonInts2[0]
+
+        log.debug(f'        {len(commonInts2)} nearby common intersections found.  Returning int closest to end point and hoping for the best')
+        closestInt = commonInts[0]
+        closestIntDist = None
+        for intersection in commonInts:
+            intGeom = [row[0] for row in arcpy.da.SearchCursor(intersections,'SHAPE@',f'ObjectID_1 = {intersection}')][0]
+            dist = XDSeg.EndPoint.distanceTo(intGeom)
+            if closestIntDist is None:
+                closestIntDist = dist
+                continue
+
+            if dist < closestIntDist:
+                closestInt = intersection
+                closestIntDist = dist
+
+        return closestInt
+
+
+    log.debug('        No common intersections found\n')
     return None
 
 
+def is_similar_shape(geom1, rte_nm, lrs):
+    arcpy.management.SelectLayerByAttribute(lrs,'CLEAR_SELECTION')
+    geom2 = [row[0] for row in arcpy.da.SearchCursor(lrs, 'SHAPE@', f"RTE_NM = '{rte_nm}'")][0]
+    rawDistances = []
+    finalDistances = []
+
+    # Compare geom1 to geom2
+    for part in geom1:
+        for point in part:
+            point = arcpy.PointGeometry(point, arcpy.SpatialReference(3969))
+            rawDistances.append(point.distanceTo(geom2))
+    
+    # Normalize by reducing each distance by minimum distance.  This will "move" the
+    # closest parts of geom1 and geom2 together to better compare geometry shape
+    rawDistances = [dist - min(rawDistances) for dist in rawDistances]
+
+    maxDist = max(rawDistances)
+    finalDistances.append(maxDist)
+
+    # Compare geom2 to geom1
+    rawDistances = []
+    geom2 = geom1.buffer(20).intersect(geom2,2)
+    for part in geom2:
+        for point in part:
+            point = arcpy.PointGeometry(point, arcpy.SpatialReference(3969))
+            rawDistances.append(point.distanceTo(geom1))
+    
+    # Normalize by reducing each distance by minimum distance.  This will "move" the
+    # closest parts of geom1 and geom2 together to better compare geometry shape
+    rawDistances = [dist - min(rawDistances) for dist in rawDistances]
+
+    maxDist = max(rawDistances)
+    finalDistances.append(maxDist)
+
+    # Get min score from both comparisons
+    hausdorff = min(finalDistances)
+
+    if hausdorff < (geom1.getLength()/4):
+        return True
+    else:
+        return False
 
 
 
-
-def first_iteration(XDSeg, lrs):
+def first_iteration(XDSeg, lrs, rerun=False):
     """ Find the nearby routes for the begin, middle, and end point of the XD segment.
         If only one route appears, then that is considered the likely match. """
 
     log.debug('    First Iteration...')
     routes = Counter()
     for point in [XDSeg.BeginPoint, XDSeg.MidPoint, XDSeg.EndPoint]:
-        nearbyRoutes = find_nearby_routes(point, lrs)
+        nearbyRoutes = find_nearby_routes(point, lrs, rerun=rerun)
         for route in nearbyRoutes:
             routes[route] += 1
 
     if len(routes) == 0:
+        if rerun == False:
+        # Try again with longer distance before trying more detailed approach
+            log.debug(f'\n\n      Failed to find matching route - trying larger search distance')
+            results = first_iteration(XDSeg, lrs, rerun=True)
+            if results:
+                return results
+            else:
+                log.debug(f'      -- Failed to find matching route --')
+                return None
+
         log.debug(f'      -- Failed to find matching route --')
         return None
 
@@ -282,19 +396,37 @@ def first_iteration(XDSeg, lrs):
         log.debug(f'      -- Matching route found --')
         return mostCommonRoutes[0][0]
     else:
+        if rerun == False:
+        # Try again with longer distance before trying more detailed approach
+            log.debug(f'\n\n      Failed to find matching route - trying larger search distance')
+            results = first_iteration(XDSeg, lrs, rerun=True)
+            if results:
+                # Test Hausdorff Distance to ensure random route wasn't picked up
+                if is_similar_shape(XDSeg.Geom, results, lrs):
+                    return results
+                else:
+                    log.debug(f'      -- Shape not similar enough: Failed to find matching route --')
+                    return None
+            else:
+                log.debug(f'      -- Failed to find matching route --')
+                return None
         log.debug(f'      -- Failed to find matching route --')
         return None
 
 
-def second_iteration(XDSeg, lrs, d=25):
+def second_iteration(XDSeg, lrs, d=25, rerun=False):
     """ Similar to first_iteration, except the nearby routes are found every d
         distance along the line. """
 
-    log.debug('\n    Second Iteration...')
+    if rerun == False:
+        log.debug('\n    Second Iteration...')
+    else:
+        log.debug('\n    Third Iteration...')
+
     routes = Counter()
     
     # Get a list of points every d distance along segment
-    points = get_points_along_line(XDSeg.Geom, d)
+    points = get_points_along_line(XDSeg.Geom, d, rerun=rerun)
 
     # Get nearby routes for each point
     for point in points:
@@ -316,9 +448,17 @@ def second_iteration(XDSeg, lrs, d=25):
         log.debug(f'      -- Matching route(s) found --')
         return routes
     else:
-        log.debug(f'      -- Failed to find matching route(s) --')
-        return None
+        if rerun == False:
+            # Try reducing the distance farther
+            log.debug(f'      Reducing d to 10...\n')
+            routes = second_iteration(XDSeg, lrs, d=10, rerun=True)
+            if routes is not None:
+                return routes
+            else:
+                log.debug(f'      -- Failed to find matching route(s) --')
+                return None
 
+    log.debug(f'      -- Failed to find matching route(s) --')
     return None
 
 
@@ -338,6 +478,23 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
     global error_list
 
     output = []
+
+    def add_to_output(eventDict, SlipRoad):
+        log.debug(f'\nAdding Event: {eventDict}')
+        XDSegID = eventDict['XDSegID']
+        RTE_NM = eventDict['RTE_NM']
+        BEGIN_MSR = eventDict['BEGIN_MSR']
+        END_MSR = eventDict['END_MSR']
+
+        # Ramps with non-ramp routes that are digitized in reverse are likely errors and should not be added to output
+        if SlipRoad in ('1', 1) and RTE_NM is not None:
+            if 'RMP' not in RTE_NM and ((RTE_NM[14:16] in ('NB','EB') and BEGIN_MSR > END_MSR) or (RTE_NM[14:16] in ('SB','WB') and BEGIN_MSR < END_MSR)) and RTE_NM not in LRS_RTE_ERRORS__REVERSED_MP:
+                log.debug(f"'{RTE_NM}' is digitized in reverse on a sliproad.  ({BEGIN_MSR} - {END_MSR})Ignoring this event.")
+                return
+
+        output.append([XDSegID, RTE_NM, BEGIN_MSR, END_MSR])
+
+
     XDFields = ['XDSegID','RoadNumber','RoadName','SlipRoad','SHAPE@']
 
     print('Creating LRS layer')
@@ -370,8 +527,14 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
             segResults = first_iteration(XDSeg, lrs)
             if segResults:
                 count_firstIteration += 1
-                output.append([XDSeg.XDSegID, segResults, get_point_mp(XDSeg.BeginPoint, lrs, segResults, lyrIntersections), get_point_mp(XDSeg.EndPoint, lrs, segResults, lyrIntersections)])
+                event = {
+                    "XDSegID": XDSeg.XDSegID,
+                    "RTE_NM": segResults,
+                    "BEGIN_MSR": get_point_mp(XDSeg.BeginPoint, lrs, segResults, lyrIntersections),
+                    "END_MSR": get_point_mp(XDSeg.EndPoint, lrs, segResults, lyrIntersections)
+                }
 
+                add_to_output(event, XDSeg.SlipRoad)
                 continue
             
             ######################
@@ -381,6 +544,23 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
             # distance along the line.
             segResults = second_iteration(XDSeg, lrs)
             if segResults:
+
+                # If only one result, do hausdorff check to ensure it's not picking up a random route
+                if len(segResults) == 1 and not is_similar_shape(XDSeg.Geom, segResults[0], lrs):
+                    log.debug('        Not a similar shape.  Returning None')
+                    event = {
+                        "XDSegID": XDSeg.XDSegID,
+                        "RTE_NM": None,
+                        "BEGIN_MSR": None,
+                        "END_MSR": None
+                    }
+                    count_error += 1
+                    error_list.append(XDSeg.XDSegID)
+                    add_to_output(event, XDSeg.SlipRoad)
+                    
+                    continue
+
+
                 count_secondIteration += 1
 
                 # If two routes are in results, first make sure that they are acutally two
@@ -392,11 +572,12 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                     compareResult = compare_route_name_similarity(segResults[0], segResults[1], lrs)
 
                     if len(compareResult) == 1: # Both directions of the same route found.  We will only use the prime direction
+                                                # Continue as if only one result in segResults
                         segResults = compareResult
 
                     if len(compareResult) != 1: # Two individual routes found.  Continue mapping on two routes
                         log.debug('        Two routes found.  Attempting to find common intersection...')
-                        commonInt = find_common_intersection(segResults[0], segResults[1], lrs, lyrIntersections)
+                        commonInt = find_common_intersection(segResults[0], segResults[1], lrs, lyrIntersections, XDSeg)
                         if commonInt is not None:
                             arcpy.management.SelectLayerByAttribute(lyrIntersections,'CLEAR_SELECTION')
                             commonIntGeom = [row[0] for row in arcpy.da.SearchCursor(lyrIntersections, 'SHAPE@', f'OBJECTID_1 = {commonInt}')][0]
@@ -420,33 +601,47 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                                 secondRoute = route1
                             
 
-                            firstSegment = [
-                                XDSeg.XDSegID,
-                                firstRoute,
-                                get_point_mp(XDSeg.BeginPoint, lrs, firstRoute, lyrIntersections),
-                                get_point_mp(commonIntGeom, lrs, firstRoute, lyrIntersections)
-                            ]
+                            firstSegment = {
+                                "XDSegID": XDSeg.XDSegID,
+                                "RTE_NM": firstRoute,
+                                "BEGIN_MSR": get_point_mp(XDSeg.BeginPoint, lrs, firstRoute, lyrIntersections),
+                                "END_MSR": get_point_mp(commonIntGeom, lrs, firstRoute, lyrIntersections)
+                            }
                             
-                            secondSegment = [
-                                XDSeg.XDSegID,
-                                secondRoute,
-                                get_point_mp(commonIntGeom, lrs, secondRoute, lyrIntersections),
-                                get_point_mp(XDSeg.EndPoint, lrs, secondRoute, lyrIntersections)
-                            ]
+                            secondSegment = {
+                                "XDSegID": XDSeg.XDSegID,
+                                "RTE_NM": secondRoute,
+                                "BEGIN_MSR": get_point_mp(commonIntGeom, lrs, secondRoute, lyrIntersections),
+                                "END_MSR": get_point_mp(XDSeg.EndPoint, lrs, secondRoute, lyrIntersections)
+                            }
 
                             log.debug(f'        firstSegment: {firstRoute}')
+                            log.debug(f'          {firstSegment}')
                             log.debug(f'          XDSeg.BeginPoint: ({XDSeg.BeginPoint.firstPoint.X},{XDSeg.BeginPoint.firstPoint.Y})')
                             log.debug(f'          commonIntGeom: ({commonIntGeom.firstPoint.X},{commonIntGeom.firstPoint.Y})')
 
                             log.debug(f'        secondSegment: {secondRoute}')
+                            log.debug(f'          {secondSegment}')
                             log.debug(f'          commonIntGeom: ({commonIntGeom.firstPoint.X},{commonIntGeom.firstPoint.Y})')
                             log.debug(f'          XDSeg.EndPoint: ({XDSeg.EndPoint.firstPoint.X},{XDSeg.EndPoint.firstPoint.Y})')
 
-                            output.append(firstSegment)
-                            output.append(secondSegment)
+                            add_to_output(firstSegment, XDSeg.SlipRoad)
+                            add_to_output(secondSegment, XDSeg.SlipRoad)
                             
                             continue
-                
+                        
+                        if commonInt is None: # Two different routes that do not share an intersection.  Try to use the route that matches most of the two
+                            log.debug('        No common routes.  Taking the first (most common) and hoping for the best')
+                            event = {
+                                "XDSegID": XDSeg.XDSegID,
+                                "RTE_NM": segResults[0],
+                                "BEGIN_MSR": get_point_mp(XDSeg.BeginPoint, lrs, segResults[0], lyrIntersections),
+                                "END_MSR": get_point_mp(XDSeg.EndPoint, lrs, segResults[0], lyrIntersections)
+                            }
+
+                            add_to_output(event, XDSeg.SlipRoad)
+                            continue
+
                 if len(segResults) > 2:
                     # For each route in segResults, attempt to find the order that they fall by distance from the
                     # begin point of the XDSegment, then map to LRS.
@@ -458,11 +653,46 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                             matchedRoutes.append(matchedRoute)
 
                         log.debug(f'          {matchedRoute}')
+                        # Sort matched routes
                         log.debug(f'          Sorted by distance from begin point:')
                         matchedRoutes = sorted(matchedRoutes, key=lambda x: x.distanceFromXDSeg)
                         log.debug(f'          {matchedRoutes}')
 
+                        # Verify that sorted routes share intersections
+                        log.debug(f'\n          Verifying sorting...')
+                        SortingVerified = False
+                        try:
+                            for i, route in enumerate(matchedRoutes):
+                                if i < len(matchedRoutes)-1: # Not last route in list
+                                    nextRoute = matchedRoutes[i+1]
+                                    if find_common_intersection(route.rte_nm, nextRoute.rte_nm,lrs,lyrIntersections,XDSeg) is None:
+                                        # Existing order is not correct
+                                        log.debug(f'            ...Sorting does not seem to be accurate')
+
+                                        # Attempt to create new order
+                                        ### Make this its own function ###
+                                        matchedRoutes[0].distanceToClosestIntersection = 0
+                                        for route in matchedRoutes[1:]:
+                                            route.get_distance_to_closest_intersection(lyrIntersections, XDSeg)
+                                        
+                                        matchedRoutes = sorted(matchedRoutes, key=lambda x: x.distanceToClosestIntersection)
+                                        log.debug(f'              {matchedRoutes}')
+                                        
+
+
+
+                                        break
+                                if i == len(matchedRoutes):
+                                    # Sorting seems to be accurate
+                                    log.debug(f'            ...Sorting verified')
+                                    SortingVerified = True
+                        except Exception as e:
+                            print(XDSeg.XDSegID, e)
+                            log.debug('            Sorting Verification Failed')
+
+
                         # Find the begin and end points for each route
+                        commonIntsUsed = [] # As intersectinos are used as a common intersection, they will be added here so they won't be used again later.  This is useful for routes that loop back
                         for i, route in enumerate(matchedRoutes):
                             pointsFound = False
                             while pointsFound == False:
@@ -496,7 +726,8 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                                     log.debug(f"          Attempting to find common int between '{route.rte_nm}' and '{nextRoute_nm}'.")
 
                                     # Find common intersection between this route and next route
-                                    commonInt = find_common_intersection(route.rte_nm, nextRoute_nm, lrs, lyrIntersections)
+                                    commonInt = find_common_intersection(route.rte_nm, nextRoute_nm, lrs, lyrIntersections, XDSeg, commonIntsUsed)
+                                    commonIntsUsed.append(commonInt)
 
                                     if commonInt is None:
                                         raise Exception("No intersection found")
@@ -515,9 +746,14 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                                                 
                         # Add events to output
                         for route in matchedRoutes:
-                            output.append([XDSeg.XDSegID, route.rte_nm, get_point_mp(route.beginPoint, lrs, route.rte_nm, lyrIntersections), get_point_mp(route.endPoint, lrs, route.rte_nm, lyrIntersections)])
-
-
+                            event = {
+                                "XDSegID": XDSeg.XDSegID,
+                                "RTE_NM": route.rte_nm,
+                                "BEGIN_MSR": get_point_mp(route.beginPoint, lrs, route.rte_nm, lyrIntersections),
+                                "END_MSR": get_point_mp(route.endPoint, lrs, route.rte_nm, lyrIntersections)
+                            }
+                            
+                            add_to_output(event, XDSeg.SlipRoad)
                         continue
 
                     except Exception as e:
@@ -526,7 +762,14 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
                         log.debug('        Route ordering failed - mapping on LRS without ordering')
                 
                 for route in segResults:
-                    output.append([XDSeg.XDSegID, route, get_point_mp(XDSeg.BeginPoint, lrs, route, lyrIntersections), get_point_mp(XDSeg.EndPoint, lrs, route, lyrIntersections)])
+                    event = {
+                            "XDSegID": XDSeg.XDSegID,
+                            "RTE_NM": route,
+                            "BEGIN_MSR": get_point_mp(XDSeg.BeginPoint, lrs, route, lyrIntersections),
+                            "END_MSR": get_point_mp(XDSeg.EndPoint, lrs, route, lyrIntersections)
+                        }
+                    
+                    add_to_output(event, XDSeg.SlipRoad)
                 continue
 
             segResults = third_iteration(XDSeg)
@@ -537,24 +780,34 @@ def match_xd_to_lrs(xd, lrs, intersections, xdFilter='', lrsFilter=''):
             
             count_error += 1
             error_list.append(XDSeg.XDSegID)
-            output.append([XDSeg.XDSegID, None, None, None])
+            event = {
+                    "XDSegID": XDSeg.XDSegID,
+                    "RTE_NM": None,
+                    "BEGIN_MSR": None,
+                    "END_MSR": None
+                }
             
+            add_to_output(event, XDSeg.SlipRoad)
     
     return output
 
 
 if __name__ == '__main__':
-    inputXD = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\RichmondDowntown'
+    inputXD = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\USA_Virginia'
     inputLRS = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\LRS'
     inputIntersections = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\LRS_intersections'
+
+    outputCSV = 'RichmondRegion.csv'
+
     start = datetime.now()
 
     # Test set of XD Segments
     testList = [132436349, 441050854, 132464894]
-    # Test these on 1/20/2023:
-    testList = [132155935, 1310472129, 449114595, 1310233908, 1310536486]
-    # Test on 1/23/2023
-    testList = [134519192]
+
+    # Error ramps from the ScaryRamp run on 1/26/2023:
+    testList = [134738324, 134996374, 135535995, 388662905, 388698981, 388713347, 388778701, 429096136, 429096137, 429096167, 429096171, 429096185, 429103295, 449101341, 450241926, 450263839, 463896182, 1310252276, 1310286249, 1310347687, 1310347925, 1310430701, 1310432326, 1310472698, 1310574212, 1310610077, 1310614847]
+    testList = [1310446091]
+
     testListStr = ''
     testSQL = ''
     if len(testList) > 0:
@@ -567,7 +820,7 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(testResults, columns=['XDSegID','RTE_NM','BEGIN_MSR','END_MSR'])
     print(df)
-    df.to_csv('output.csv', index=False)
+    df.to_csv(outputCSV, index=False)
 
     end = datetime.now()
     log.info(f'\n\nRun Time: {end - start}')
