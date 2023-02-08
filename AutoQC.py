@@ -46,7 +46,7 @@ def is_similar_shape(geom1, geom2, normalized=False):
 
     hausdorff = round(min([hausdorff_1, hausdorff_2]), 2)
 
-    if hausdorff < (geom1.getLength()/4):
+    if hausdorff < (geom1.getLength()/10) and hausdorff < 10:
         return True, hausdorff
     else:
         return False, hausdorff
@@ -74,20 +74,41 @@ def compare_bearing(XDGeom, geom2, part):
         geom2_End = arcpy.PointGeometry(geom2.firstPoint)
 
 
-    
+
     if part == 'First':
         XDGeom_End = XDGeom.positionAlongLine(0.5, 'TRUE')
         geom2_End = geom2.positionAlongLine(0.5, 'TRUE')
     
     if part == 'Second':
         XDGeom_Begin = XDGeom.positionAlongLine(0.5, 'TRUE')
-        XDGeom_Begin = XDGeom.positionAlongLine(0.5, 'TRUE')
+        geom2_Begin = geom2.positionAlongLine(0.5, 'TRUE')
+
 
     XDGeom_Bearing = get_bearing(XDGeom_Begin, XDGeom_End)
     geom2_Bearing = get_bearing(geom2_Begin, geom2_End)
 
     return abs(XDGeom_Bearing - geom2_Bearing), XDGeom_Bearing, geom2_Bearing
-        
+
+
+def add_confidence_field(conflationLayer, scores):
+    # Add confidence filed to conflation layer
+    fields = [field.name for field in arcpy.ListFields(conflationLayer)]
+    if 'confidence' not in fields:
+        arcpy.AddField_management(conflationLayer, 'confidence', 'SHORT')
+    
+    # Create dictionary containing scores by XDSegID
+    scoreDict = {}
+    for score in scores:
+        scoreDict[score['XDSegID']] = score['confidence']
+    
+    # Add scores to conflation layer
+    with arcpy.da.UpdateCursor(conflationLayer, ['XDSegID', 'confidence']) as cur:
+        for row in cur:
+            XDSegID = row[0]
+            if XDSegID in scoreDict.keys():
+                row[1] = scoreDict[XDSegID]
+                cur.updateRow(row)
+    
 
 
 def get_confidence_score(XDSegID, XDGeom, conflationGeom):
@@ -136,8 +157,8 @@ def get_confidence_score(XDSegID, XDGeom, conflationGeom):
     subtraction = [
         0 if totalLengthDifference < 100 else 0.1,
         0 if isSimilarLength else 0.3,
-        0 if isSimilarShape else 0.1,
-        0 if isSimilarShapeNormalized else 0.1,
+        0 if isSimilarShape else 0.3,
+        0 if isSimilarShapeNormalized else 0.3,
         0 if centroidDifference < 100 else 0.1,
         0 if isSimilarBearing else 0
     ]
@@ -181,11 +202,11 @@ def get_confidence_score(XDSegID, XDGeom, conflationGeom):
 
 if __name__ == '__main__':
     inputXD = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\USA_Virginia'
-    inputConflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\BedfordOutputPrj'
+    inputConflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\RichmondRegionFlipped'
 
     conflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\conflation'
 
-    outputCSV = 'AutoQC.csv'
+    outputCSV = r'Output\RichmondRegionQC.csv'
     arcpy.env.overwriteOutput = True
 
     # Make dissolved copy of input conflation in memory
@@ -221,6 +242,10 @@ if __name__ == '__main__':
         }
 
         output.append(record)
-    
+
+    print(f'Saving output CSV to {outputCSV}')    
     df = pd.DataFrame(output)
     df.to_csv(outputCSV, index=False)
+
+    print(f'Adding confidence field to {inputConflation}')
+    add_confidence_field(inputConflation, output)

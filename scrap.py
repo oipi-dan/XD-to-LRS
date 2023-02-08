@@ -1,15 +1,16 @@
-import arcpy
-from xd_to_rns import move_to_closest_int
+import json
 
-inputIntersections = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\LRS_intersections'
-print('Creating Intersection Layer')
-intersectionResults = arcpy.MakeFeatureLayer_management(inputIntersections, "int")
-lyrIntersections = intersectionResults.getOutput(0)
+list = ['route1', 'route2', 'route3']
 
-print('Finding Nearest Intersection')
-geom = arcpy.PointGeometry(arcpy.Point(181130.11460000277,174557.64059999958), arcpy.SpatialReference(3969))
+with open('testList.json', 'w') as file:
+    json.dump(list, file)
 
-point, moved= move_to_closest_int(geom, lyrIntersections)
 
-print(moved)
-print(point)
+loadedList = ['route0']
+try:
+    with open('testLists.json', 'r') as file:
+        loadedList += json.load(file)
+except Exception as e:
+    print(e)
+
+print(loadedList)
