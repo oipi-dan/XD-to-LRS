@@ -1,16 +1,9 @@
-import json
-
-list = ['route1', 'route2', 'route3']
-
-with open('testList.json', 'w') as file:
-    json.dump(list, file)
+import sys
 
 
-loadedList = ['route0']
-try:
-    with open('testLists.json', 'r') as file:
-        loadedList += json.load(file)
-except Exception as e:
-    print(e)
 
-print(loadedList)
+if __name__ == '__main__':
+    args = sys.argv
+    print('args:')
+    for arg in args[1:]:
+        print(f'    {arg}')

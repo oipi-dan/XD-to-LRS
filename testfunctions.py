@@ -1,7 +1,7 @@
 """ These are functions to paste into Pro's python window to aid in QC """
 
 XDLayer = 'USA_Virginia'
-OutputLayer = 'output'
+OutputLayer = 'ToRahulEvents'
 
 testlist = [row[0] for row in arcpy.da.SearchCursor(XDLayer, 'XDSegID')]
 current = None

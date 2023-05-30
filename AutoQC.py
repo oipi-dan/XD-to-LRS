@@ -145,9 +145,9 @@ def get_confidence_score(XDSegID, XDGeom, conflationGeom):
     centroidDifference = round(XDCentroid.distanceTo(conflationCentroid))
 
     # Bearing
-    segmentBearing_Total, XDBearing_Total, ConflationBearing_Total = compare_bearing(XDGeom, ConflationGeom, 'Total')
-    segmentBearing_FirstHalf, XDBearing_First, ConflationBearing_First = compare_bearing(XDGeom, ConflationGeom, 'First')
-    segmentBearing_SecondHalf, XDBearing_Second, ConflationBearing_Second = compare_bearing(XDGeom, ConflationGeom, 'Second')
+    segmentBearing_Total, XDBearing_Total, ConflationBearing_Total = compare_bearing(XDGeom, conflationGeom, 'Total')
+    segmentBearing_FirstHalf, XDBearing_First, ConflationBearing_First = compare_bearing(XDGeom, conflationGeom, 'First')
+    segmentBearing_SecondHalf, XDBearing_Second, ConflationBearing_Second = compare_bearing(XDGeom, conflationGeom, 'Second')
     isSimilarBearing = True if segmentBearing_Total + segmentBearing_FirstHalf + segmentBearing_SecondHalf <= 30 else False
 
 
@@ -199,10 +199,60 @@ def get_confidence_score(XDSegID, XDGeom, conflationGeom):
     return finalScore
 
 
+def run_AutoQC(conflationName, inputXD, inputConflation, outputCSV):
+    fileHandler = logging.FileHandler(f'Logs\{conflationName}_AutoQC.log', mode='w')
+    log.addHandler(fileHandler)
+
+    conflation = r'memory\conflation'
+
+    arcpy.env.overwriteOutput = True
+
+    # Make dissolved copy of input conflation in memory
+    arcpy.Dissolve_management(inputConflation, conflation, 'XDSegID')
+
+    # List XDs in dissolved layer
+    XDs = [row[0] for row in arcpy.da.SearchCursor(conflation, 'XDSegID')]
+
+
+
+    # Build dictionary of geometries
+    print('Building XDGeomDict')
+    XDGeomDict = {int(row[0]): row[1] for row in arcpy.da.SearchCursor(inputXD, ['XDSegID','SHAPE@'])}
+
+
+    
+    print('Building ConflationGeomDict')
+    ConflationGeomDict = {int(row[0]): row[1] for row in arcpy.da.SearchCursor(conflation, ['XDSegID','SHAPE@'])}
+ 
+    output = []
+    for XD in XDs:
+        log.debug(f'\n\n=== Processing {XD} ===')
+
+        # Get geometries
+        XDGeom = XDGeomDict[XD]
+        ConflationGeom = ConflationGeomDict[XD]
+
+        confidence = get_confidence_score(XD, XDGeom, ConflationGeom)
+
+        record = {
+            'XDSegID': XD,
+            'confidence': confidence
+        }
+
+        output.append(record)
+
+    print(f'Saving output CSV to {outputCSV}')    
+    df = pd.DataFrame(output)
+    df.to_csv(outputCSV, index=False)
+
+    print(f'Adding confidence field to {inputConflation}')
+    add_confidence_field(inputConflation, output)
+
+
 
 if __name__ == '__main__':
     inputXD = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ProjectedInput.gdb\USA_Virginia'
-    inputConflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\RichmondRegionFlipped'
+    inputConflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\ScaryRampsFlipped'
 
     conflation = r'C:\Users\daniel.fourquet\Documents\Tasks\XD-to-LRS\Data\ArcGIS\Default.gdb\conflation'
 
